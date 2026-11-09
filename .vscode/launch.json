@@ -1,0 +1,16 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run Tabit",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}",
+        "--disable-extensions"
+      ],
+      "preLaunchTask": "Tabit: watch TypeScript",
+      "outFiles": ["${workspaceFolder}/dist/**/*.js"]
+    }
+  ]
+}
