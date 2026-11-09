@@ -10,9 +10,113 @@
   "categories": [
     "Programming Languages"
   ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
   "capabilities": {
     "untrustedWorkspaces": {
       "supported": false
+    }
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "fimCompletion.trigger",
+        "title": "Tabit: Trigger Inline Suggestion"
+      },
+      {
+        "command": "fimCompletion.configure",
+        "title": "Tabit: Select Provider and Model"
+      },
+      {
+        "command": "fimCompletion.setKey",
+        "title": "Tabit: Set API Key"
+      },
+      {
+        "command": "fimCompletion.removeKey",
+        "title": "Tabit: Remove API Key"
+      },
+      {
+        "command": "fimCompletion.toggle",
+        "title": "Tabit: Toggle Automatic Suggestions"
+      },
+      {
+        "command": "fimCompletion.openSettings",
+        "title": "Tabit: Open Settings",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "fimCompletion.refreshHistory",
+        "title": "Tabit: Refresh History",
+        "icon": "$(refresh)"
+      }
+    ],
+    "configuration": {
+      "title": "Tabit",
+      "properties": {
+        "fimCompletion.automatic": {
+          "type": "boolean",
+          "default": true,
+          "scope": "application",
+          "description": "Request cloud completions after typing or moving the caret. Manual inline triggers remain available."
+        },
+        "fimCompletion.debounceMs": {
+          "type": "integer",
+          "default": 300,
+          "minimum": 0,
+          "maximum": 2000,
+          "scope": "application",
+          "description": "Delay before sending an automatic completion request."
+        },
+        "fimCompletion.maxOutputTokens": {
+          "type": "integer",
+          "default": 256,
+          "minimum": 32,
+          "maximum": 4096,
+          "scope": "application",
+          "description": "Maximum output tokens per completion, including reasoning tokens where applicable."
+        },
+        "fimCompletion.timeoutMs": {
+          "type": "integer",
+          "default": 10000,
+          "minimum": 1000,
+          "maximum": 60000,
+          "scope": "application",
+          "description": "Timeout for a completion request after the typing delay."
+        }
+      }
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "fimCompletionSidebar",
+          "title": "Tabit",
+          "icon": "resources/activity.svg"
+        }
+      ]
+    },
+    "views": {
+      "fimCompletionSidebar": [
+        {
+          "id": "fimCompletion.settings",
+          "name": "Completion History"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "fimCompletion.openSettings",
+          "when": "view == fimCompletion.settings",
+          "group": "navigation@1"
+        },
+        {
+          "command": "fimCompletion.refreshHistory",
+          "when": "view == fimCompletion.settings",
+          "group": "navigation@2"
+        }
+      ]
     }
   },
   "scripts": {
