@@ -4,6 +4,7 @@
   "description": "Inline code completion with OpenAI, Anthropic, OpenRouter, and Together AI.",
   "version": "0.5.15",
   "publisher": "tabit",
+  "license": "MIT",
   "engines": {
     "vscode": "^1.101.0"
   },
@@ -124,7 +125,7 @@
     "watch": "tsc -p tsconfig.json --watch",
     "test": "npm run build && node --test \"test/**/*.test.cjs\"",
     "vscode:prepublish": "npm test",
-    "package": "vsce package --allow-missing-repository --skip-license --out Tabit.vsix",
+    "package": "vsce package --allow-missing-repository --out Tabit.vsix",
     "prebuild": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\""
   },
   "devDependencies": {
