@@ -69,4 +69,4 @@ Open this folder in VS Code and press F5 (Fn+F5 on some keyboards) with **Run Ta
 
 The enum and registry drive the provider picker. The adapter's registered handlers determine which completion modes the picker offers.
 
-Provider icons are bundled from [Lobe Icons](https://github.com/lobehub/lobe-icons). The license is included at `resources/providers/LICENSE`.
+Provider and model family icons are loaded from the [LobeHub SVG package](https://icons.lobehub.com/), `@lobehub/icons-static-svg`.

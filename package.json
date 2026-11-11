@@ -136,6 +136,7 @@
     "typescript": "5.9.3"
   },
   "dependencies": {
+    "@lobehub/icons-static-svg": "1.95.1",
     "axios": "1.21.0"
   }
 }

@@ -3,38 +3,76 @@ const modelPopover = document.getElementById('models');
 const search = document.getElementById('model-search');
 const list = document.getElementById('model-list');
 const modelStatus = document.getElementById('model-status');
-let models = [];
+let modelGroups = [];
 let currentModel;
 let catalogError = false;
 let loading = false;
 
+function label(tag, className, text) {
+  const element = document.createElement(tag);
+  element.className = className;
+  element.textContent = text;
+  return element;
+}
+
+function logo(source, className, monochrome) {
+  if (monochrome) {
+    const icon = document.createElement('span');
+    icon.className = `${className} monochrome`;
+    icon.setAttribute('aria-hidden', 'true');
+    icon.style.setProperty('--family-icon', `url("${source}")`);
+    return icon;
+  }
+  const icon = document.createElement('img');
+  icon.src = source;
+  icon.alt = '';
+  icon.width = 16;
+  icon.height = 16;
+  icon.className = className;
+  return icon;
+}
+
 function renderModels() {
   if (!list || !search || !modelStatus) return;
-  const query = search.value.toLowerCase();
-  const matches = models.filter(({ id, name }) => `${name} ${id}`.toLowerCase().includes(query));
-  const buttons = matches.slice(0, 100).map(({ id, name }) => {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'option';
-    button.dataset.action = 'model';
-    button.dataset.value = id;
-    const icon = document.createElement('img');
-    icon.src = list.dataset.icon;
-    icon.alt = '';
-    icon.width = 16;
-    icon.height = 16;
-    icon.className = 'provider-icon';
-    const title = document.createElement('span');
-    title.textContent = name;
-    button.append(icon, title);
-    if (id === currentModel) button.setAttribute('aria-current', 'true');
-    return button;
-  });
-  list.replaceChildren(...buttons);
+  const terms = search.value.toLowerCase().trim().split(/\s+/);
+  const groups = modelGroups.map((group) => ({
+    ...group,
+    models: group.models.filter(({ id, name }) => {
+      const searchable = `${group.label} ${name} ${id}`.toLowerCase();
+      return terms.every((term) => searchable.includes(term));
+    }),
+  })).filter((group) => group.models.length);
+  const count = groups.reduce((total, group) => total + group.models.length, 0);
+  const content = document.createDocumentFragment();
+  if (count) {
+    const header = label('h2', 'catalog-header', list.dataset.provider);
+    header.prepend(logo(list.dataset.icon, 'provider-icon'));
+    header.append(label('span', 'catalog-count', count.toLocaleString()));
+    content.append(header);
+  }
+  for (const group of groups) {
+    const family = document.createElement('div');
+    family.className = 'model-family';
+    const heading = label('h3', 'family-heading', group.label);
+    if (group.icon) heading.prepend(logo(group.icon, 'family-icon', group.monochrome));
+    const options = document.createElement('div');
+    options.className = 'model-options';
+    for (const { id, name } of group.models) {
+      const button = label('button', 'option', name);
+      button.type = 'button';
+      button.dataset.action = 'model';
+      button.dataset.value = id;
+      if (id === currentModel) button.setAttribute('aria-current', 'true');
+      options.append(button);
+    }
+    family.append(heading, options);
+    content.append(family);
+  }
+  list.replaceChildren(content);
+  list.scrollTop = 0;
   modelStatus.textContent = loading ? 'Loading models…'
-    : catalogError ? 'You can enter a model ID manually.'
-    : !matches.length ? 'No matching models. You can enter a model ID.'
-    : matches.length > buttons.length ? 'Showing the first 100 matches. Search to narrow the list.' : '';
+    : catalogError ? 'Model catalog unavailable.'
+    : !count ? 'No matching coding models.' : '';
 }
 
 modelPopover?.addEventListener('toggle', (event) => {
@@ -98,7 +136,7 @@ document.addEventListener('submit', (event) => {
 window.addEventListener('message', ({ data }) => {
   if (data.type === 'models') {
     loading = false;
-    models = data.models;
+    modelGroups = data.groups;
     catalogError = data.unavailable;
     currentModel = data.current;
     renderModels();
