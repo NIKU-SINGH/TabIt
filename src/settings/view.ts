@@ -1,10 +1,22 @@
+import { dirname } from 'node:path';
 import * as vscode from 'vscode';
 import { PROVIDERS, ProviderId } from '../providers/cloud-client';
 import type { Selection } from '../providers/types';
 
 import type { Model } from '../providers/types';
-import { modelTitle } from '../providers/model-catalog';
+import { groupModels, modelTitle } from '../providers/model-catalog';
 import { isObject } from '../providers/contracts';
+
+const icons = vscode.Uri.joinPath(
+  vscode.Uri.file(dirname(require.resolve('@lobehub/icons-static-svg/package.json'))),
+  'icons',
+);
+
+function iconUri(webview: vscode.Webview, name: string): string {
+  return webview.asWebviewUri(vscode.Uri.joinPath(icons, `${name}.svg`)).toString();
+}
+
+const MONOCHROME_ICONS = new Set(['openai', 'zai', 'grok']);
 
 export const MODE_LABELS = {
   prompted: 'Prompted infill',
@@ -78,7 +90,7 @@ export class SettingsView implements vscode.Disposable {
     const panel = vscode.window.createWebviewPanel('fimCompletion.settingsEditor', 'Tabit Settings',
       vscode.ViewColumn.Active, {
         enableScripts: true,
-        localResourceRoots: [this.resources],
+        localResourceRoots: [this.resources, icons],
       });
     this.panel = panel;
     const messages = panel.webview.onDidReceiveMessage((message: unknown) => {
@@ -109,8 +121,8 @@ export class SettingsView implements vscode.Disposable {
     const automatic = settings.get<boolean>('automatic', true);
     const provider = this.draftProvider ?? selection?.provider;
     const selectedModel = selection?.provider === provider ? selection?.model : undefined;
-    const providerIcon = (id: ProviderId): string => escapeHtml(
-      panel.webview.asWebviewUri(vscode.Uri.joinPath(this.resources, 'providers', `${id}.svg`)).toString());
+    const selectedModelTitle = selectedModel ? modelTitle(selectedModel) : undefined;
+    const providerIcon = (id: ProviderId): string => escapeHtml(iconUri(panel.webview, id));
     const providerLabel = (id: ProviderId): string => {
       return `<img class="provider-icon" src="${providerIcon(id)}" alt="" width="18" height="18"><span>${escapeHtml(PROVIDERS[id].label)}</span>`;
     };
@@ -149,6 +161,23 @@ export class SettingsView implements vscode.Disposable {
       .option{display:flex;align-items:center;text-align:left;overflow-wrap:anywhere;gap:8px;padding:5px 7px;background:transparent;color:inherit}
       .option:hover,.option:focus-visible,.option[aria-current]{background:var(--vscode-list-hoverBackground)}
       .provider-icon{flex:none;background:#f5f5f5;border-radius:3px;padding:2px}
+      #models{overflow:hidden}
+      #models:popover-open{display:flex;flex-direction:column}
+      #models .search{padding:6px 10px;border-bottom:1px solid var(--vscode-editorGroup-border)}
+      #model-list{min-height:0;overflow:auto}
+      #model-status:empty,#model-list:empty{display:none}
+      .catalog-header,.family-heading{display:flex;align-items:center;gap:8px;margin:0;font-size:inherit;font-weight:500}
+      .catalog-header{position:sticky;top:0;padding:7px 10px;background:var(--vscode-editor-background);border-bottom:1px solid var(--vscode-editorGroup-border)}
+      .catalog-count{margin-left:auto;padding:1px 6px;border-radius:999px;background:var(--vscode-badge-background);color:var(--vscode-badge-foreground);font-size:.8em}
+      .model-family{margin:6px 7px 6px 12px}
+      .family-heading{padding:2px 0 4px;color:var(--vscode-descriptionForeground)}
+      .family-icon{display:inline-block;width:16px;height:16px;flex:none}
+      .family-icon.monochrome{background:currentColor;mask:var(--family-icon) center/contain no-repeat}
+      .model-options{display:grid;margin-left:7px;padding-left:7px;border-left:1px solid var(--vscode-editorGroup-border)}
+      .model-options .option{padding:3px 7px}
+      .manual-model{border-top:1px solid var(--vscode-editorGroup-border);padding:7px 10px}
+      .manual-model summary{cursor:pointer;color:var(--vscode-descriptionForeground)}
+      .manual-model form{padding:6px 0 0}
       .current{margin-left:auto;color:var(--vscode-descriptionForeground);font-size:.85em}
       form,.search{display:grid;gap:8px;padding:8px 10px}
       input:not([type=checkbox]){box-sizing:border-box;width:100%;font:inherit;padding:5px 7px;color:var(--vscode-input-foreground);background:var(--vscode-input-background);border:1px solid var(--vscode-input-border,var(--vscode-widget-border,transparent));border-radius:4px}
@@ -177,10 +206,11 @@ export class SettingsView implements vscode.Disposable {
       <p>Choose how VS Code generates inline suggestions.</p>
       <h2>Provider and model</h2><section>
       ${row('Provider', provider ? PROVIDERS[provider].label : 'No provider selected', popover('providers', provider ? providerLabel(provider) : 'Choose provider', 'Select provider', `<div class="options">${providerOptions}</div>`))}
-      ${row('Model', (selectedModel ? modelTitle(selectedModel) : undefined) ?? (provider ? 'Choose a model to activate this provider' : 'Choose a provider first'), provider
+      ${row('Model', selectedModelTitle ?? (provider ? 'Choose a model to activate this provider' : 'Choose a provider first'), provider
         ? popover('models', 'Choose model', 'Select model', `<div class="search"><input id="model-search" type="search" placeholder="Search coding models" aria-label="Search coding models"></div>
-          <div id="model-status" class="hint" role="status"></div><div id="model-list" class="options" data-icon="${providerIcon(provider)}"></div>
-          <form data-action="model"><label>Model ID<input name="value" required maxlength="500"></label><button type="submit">Use model ID</button></form>`) : '')}
+          <div id="model-status" class="hint" role="status"></div><div id="model-list" data-provider="${escapeHtml(PROVIDERS[provider].label)}" data-icon="${providerIcon(provider)}"></div>
+          <details class="manual-model"><summary>Enter a model ID</summary>
+          <form data-action="model"><input name="value" aria-label="Model ID" required maxlength="500"><button type="submit">Use model ID</button></form></details>`) : '')}
       ${row('API key', provider ? PROVIDERS[provider].label : 'Choose a provider first', provider
         ? popover('api-key', 'Manage key', `API key · ${escapeHtml(PROVIDERS[provider].label)}`,
           `<form class="key-form" data-action="key" novalidate>
@@ -214,13 +244,19 @@ export class SettingsView implements vscode.Disposable {
           const models = await this.actions.models(provider);
           if (this.panel === panel && (this.draftProvider ?? this.currentSelection()?.provider) === provider) {
             if (!models) void vscode.window.showWarningMessage(`Tabit: Add an API key for ${PROVIDERS[provider].label} to load its model catalog.`);
-            await panel.webview.postMessage({ type: 'models', models: models ?? [], unavailable: !models,
+            const groups = groupModels(models ?? []).map(({ label, icon, models }) => ({
+              label,
+              models,
+              icon: icon && iconUri(panel.webview, icon),
+              monochrome: icon !== undefined && MONOCHROME_ICONS.has(icon),
+            }));
+            await panel.webview.postMessage({ type: 'models', groups, unavailable: !models,
               current: current?.provider === provider ? current.model : undefined });
           }
         } catch {
           if (this.panel === panel && (this.draftProvider ?? this.currentSelection()?.provider) === provider) {
             void vscode.window.showWarningMessage(`Tabit: Could not load models from ${PROVIDERS[provider].label}. Check your API key or connection, or enter a model ID manually.`);
-            await panel.webview.postMessage({ type: 'models', models: [], unavailable: true });
+            await panel.webview.postMessage({ type: 'models', groups: [], unavailable: true });
           }
         }
         return;
