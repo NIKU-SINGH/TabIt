@@ -172,7 +172,8 @@ export function activate(context: vscode.ExtensionContext): void {
     lastSkipReason = reason;
     return [];
   }
-  const settingsView = new SettingsView(vscode.Uri.joinPath(context.extensionUri, 'resources'), () => selection, settings, {
+  const resources = vscode.Uri.joinPath(context.extensionUri, 'resources');
+  const settingsView = new SettingsView(resources, () => selection, settings, {
     models: async (provider) => {
       const key = await context.secrets.get(keyName(provider));
       if (!key) return undefined;
@@ -187,7 +188,7 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.Uri.joinPath(context.globalStorageUri, 'code-completions').fsPath,
     vscode.Uri.joinPath(context.globalStorageUri, '..', 'local-fim.fim-completion', 'code-completions').fsPath,
   );
-  const historyView = new HistoryView(history);
+  const historyView = new HistoryView(history, resources);
 
   function refreshStatus(): void {
     status.command = `${SECTION}.configure`;
@@ -362,7 +363,7 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
     vscode.window.onDidChangeActiveTextEditor(() => editorTrigger.cancel()),
     // Keep the original view ID so VS Code can restore its saved layout.
-    vscode.window.registerTreeDataProvider('fimCompletion.settings', historyView),
+    vscode.window.registerWebviewViewProvider('fimCompletion.settings', historyView),
     { dispose: invalidate },
     context.secrets.onDidChange(({ key }) => {
       if (selection && key === keyName(selection.provider)) invalidate();
