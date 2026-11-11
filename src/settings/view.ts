@@ -4,7 +4,7 @@ import { PROVIDERS, ProviderId } from '../providers/cloud-client';
 import type { Selection } from '../providers/types';
 
 import type { Model } from '../providers/types';
-import { groupModels, modelTitle } from '../providers/model-catalog';
+import { groupModels, modelFamily, modelTitle } from '../providers/model-catalog';
 import { isObject } from '../providers/contracts';
 
 const icons = vscode.Uri.joinPath(
@@ -122,6 +122,12 @@ export class SettingsView implements vscode.Disposable {
     const provider = this.draftProvider ?? selection?.provider;
     const selectedModel = selection?.provider === provider ? selection?.model : undefined;
     const selectedModelTitle = selectedModel ? modelTitle(selectedModel) : undefined;
+    const selectedIcon = selectedModel ? modelFamily(selectedModel)?.icon : undefined;
+    const modelIcon = selectedIcon ? escapeHtml(iconUri(panel.webview, selectedIcon)) : '';
+    const modelIconMarkup = !selectedIcon ? '' : MONOCHROME_ICONS.has(selectedIcon)
+      ? `<span class="family-icon monochrome" aria-hidden="true" style="--family-icon:url('${modelIcon}')"></span>`
+      : `<img class="family-icon" src="${modelIcon}" alt="" width="16" height="16">`;
+    const modelLabel = `${modelIconMarkup}<span>${escapeHtml(selectedModelTitle ?? 'Choose model')}</span>`;
     const providerIcon = (id: ProviderId): string => escapeHtml(iconUri(panel.webview, id));
     const providerLabel = (id: ProviderId): string => {
       return `<img class="provider-icon" src="${providerIcon(id)}" alt="" width="18" height="18"><span>${escapeHtml(PROVIDERS[id].label)}</span>`;
@@ -154,7 +160,9 @@ export class SettingsView implements vscode.Disposable {
       button{font:inherit;cursor:pointer;color:var(--vscode-button-secondaryForeground);background:var(--vscode-button-secondaryBackground);padding:5px 9px;border:1px solid transparent;border-radius:5px}
       button:hover{background:var(--vscode-button-secondaryHoverBackground)}
       button:focus-visible,input:focus-visible{outline:1px solid var(--vscode-focusBorder);outline-offset:2px}
-      .control{flex:none}.trigger{display:flex;align-items:center;gap:8px}
+      .control{flex:none;max-width:100%}.trigger{display:flex;align-items:center;gap:8px}
+      .trigger[popovertarget=models]{text-align:left;overflow-wrap:anywhere}
+      .trigger[popovertarget=models] svg{flex:none}
       .popover{position:fixed;inset:auto;position-area:bottom span-left;justify-self:end;align-self:start;position-try-fallbacks:flip-block;box-sizing:border-box;margin:6px 0;width:min(280px,calc(100vw - 24px));max-height:min(420px,70vh);overflow:auto;padding:0;border:1px solid var(--vscode-widget-border,var(--vscode-editorGroup-border));border-radius:8px;background:var(--vscode-editor-background);color:var(--vscode-foreground);box-shadow:0 6px 20px var(--vscode-widget-shadow,#0006)}
       .popover-title{padding:8px 11px 6px;border-bottom:1px solid var(--vscode-editorGroup-border);font-size:.75em;letter-spacing:.12em;text-transform:uppercase;color:var(--vscode-descriptionForeground)}
       .options{display:grid;gap:2px;padding:4px}
@@ -207,7 +215,7 @@ export class SettingsView implements vscode.Disposable {
       <h2>Provider and model</h2><section>
       ${row('Provider', provider ? PROVIDERS[provider].label : 'No provider selected', popover('providers', provider ? providerLabel(provider) : 'Choose provider', 'Select provider', `<div class="options">${providerOptions}</div>`))}
       ${row('Model', selectedModelTitle ?? (provider ? 'Choose a model to activate this provider' : 'Choose a provider first'), provider
-        ? popover('models', 'Choose model', 'Select model', `<div class="search"><input id="model-search" type="search" placeholder="Search coding models" aria-label="Search coding models"></div>
+        ? popover('models', modelLabel, 'Select model', `<div class="search"><input id="model-search" type="search" placeholder="Search coding models" aria-label="Search coding models"></div>
           <div id="model-status" class="hint" role="status"></div><div id="model-list" data-provider="${escapeHtml(PROVIDERS[provider].label)}" data-icon="${providerIcon(provider)}"></div>
           <details class="manual-model"><summary>Enter a model ID</summary>
           <form data-action="model"><input name="value" aria-label="Model ID" required maxlength="500"><button type="submit">Use model ID</button></form></details>`) : '')}
