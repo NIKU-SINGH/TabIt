@@ -101,6 +101,7 @@
       "fimCompletionSidebar": [
         {
           "id": "fimCompletion.settings",
+          "type": "webview",
           "name": "Completion History"
         }
       ]
