@@ -137,13 +137,18 @@ export function activate(context: vscode.ExtensionContext): void {
   const output = vscode.window.createOutputChannel('Tabit', { log: true });
   const development = context.extensionMode === vscode.ExtensionMode.Development;
 
-  function log(level: 'info' | 'warn' | 'debug', message: string, details?: object): void {
-    if (details) output[level](message, details);
-    else output[level](message);
+  const debugColors = { success: '32', warn: '38;5;208', error: '31', info: '', debug: '' } as const;
+
+  function log(level: keyof typeof debugColors, message: string, details?: object): void {
+    const outputLevel = level === 'success' ? 'info' : level;
+    if (details) output[outputLevel](message, details);
+    else output[outputLevel](message);
     if (development) {
       const line = `[Tabit] [${level}] ${message}`;
-      if (details) console.log(line, details);
-      else console.log(line);
+      const color = debugColors[level];
+      const formatted = color ? `\x1b[${color}m${line}\x1b[0m` : line;
+      if (details) console.log(formatted, details);
+      else console.log(formatted);
     }
   }
 
@@ -282,7 +287,7 @@ export function activate(context: vscode.ExtensionContext): void {
         const result = await client.complete(target, key, code, maxOutputTokens, signal);
         const insertion = cleanInsertion(result.text, code.suffix);
         const stale = signal.aborted || document.version !== version || document.isClosed;
-        log('info', 'Completion response', { ...metadata, elapsedMs: Date.now() - sent,
+        log(!stale && insertion ? 'success' : 'info', 'Completion response', { ...metadata, elapsedMs: Date.now() - sent,
           totalTokens: result.totalTokens, outputLength: result.text.length, insertionLength: insertion.length,
           outcome: stale ? 'discarded' : insertion ? 'returned' : 'empty' });
         void history.record({
@@ -312,7 +317,7 @@ export function activate(context: vscode.ExtensionContext): void {
           return [];
         }
         const message = errorMessage(error);
-        log('warn', 'Completion failed', { ...metadata, elapsedMs: Date.now() - started, message,
+        log('error', 'Completion failed', { ...metadata, elapsedMs: Date.now() - started, message,
           status: error instanceof CloudError ? error.status : undefined });
         if (!automatic || message !== lastLoggedError) void vscode.window.showWarningMessage(`Tabit: ${message}`);
         lastLoggedError = message;
